@@ -1113,8 +1113,8 @@ export class RangeSelection implements BaseSelection {
     const selectedNodes = this.getNodes();
     const firstPoint = this.isBackward() ? focus : anchor;
     const lastPoint = this.isBackward() ? anchor : focus;
-    let firstNode = firstPoint.getNode();
-    let lastNode = lastPoint.getNode();
+    const firstNode = firstPoint.getNode();
+    const lastNode = lastPoint.getNode();
     const firstBlock = $getAncestor(firstNode, INTERNAL_$isBlock);
     const lastBlock = $getAncestor(lastNode, INTERNAL_$isBlock);
 
@@ -1129,30 +1129,30 @@ export class RangeSelection implements BaseSelection {
       }
     });
 
-    const fixText = (node: TextNode, del: number) => {
-      if (node.getTextContent() === '') {
+    const fixText = (node: TextNode, offset: number) => {
+      if (node.getTextContent() === '' || node.isToken()) {
         node.remove();
-      } else if (del !== 0 && $isTokenOrSegmented(node)) {
-        const textNode = $createTextNode(node.getTextContent());
-        textNode.setFormat(node.getFormat());
-        textNode.setStyle(node.getStyle());
-        return node.replace(textNode);
+      }
+
+      if (node.isSegmented()) {
+        $removeSegment(node, this.isBackward(), offset);
       }
     };
+
     if (firstNode === lastNode && $isTextNode(firstNode)) {
       const del = Math.abs(focus.offset - anchor.offset);
       firstNode.spliceText(firstPoint.offset, del, '', true);
-      fixText(firstNode, del);
+      fixText(firstNode, lastPoint.offset);
       return;
     }
     if ($isTextNode(firstNode)) {
       const del = firstNode.getTextContentSize() - firstPoint.offset;
       firstNode.spliceText(firstPoint.offset, del, '');
-      firstNode = fixText(firstNode, del) || firstNode;
+      fixText(firstNode, firstPoint.offset);
     }
     if ($isTextNode(lastNode)) {
       lastNode.spliceText(0, lastPoint.offset, '');
-      lastNode = fixText(lastNode, lastPoint.offset) || lastNode;
+      fixText(lastNode, lastPoint.offset);
     }
     if (firstNode.isAttached() && $isTextNode(firstNode)) {
       firstNode.selectEnd();
